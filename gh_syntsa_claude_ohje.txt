@@ -1,0 +1,55 @@
+Tässä on koodisi yksityiskohtainen ja kattava dokumentaatio. Olen jakanut selitykset loogisiin kokonaisuuksiin, jotta näet tarkalleen, miten fyysiset painallukset ohjaavat ohjelmiston eri tiloja ja muuttujia.
+
+### 🎸 Guitar Hero -Syntetisaattorin Käyttöopas ja Painikedokumentaatio
+
+Tämä ohjelmisto tekee kitaraohjaimesta kaksiäänisen instrumentin: se voi toimia joko moniäänisenä sointusoittimena (Sointutila) tai perinteisenä yksittäisiä ääniä soittavana syntetisaattorina (Nuottitila). 
+
+---
+
+### 1. Nauhapainikkeet (Fretit: Vihreä, Punainen, Keltainen, Sininen, Oranssi)
+Nauhapainikkeet määrittävät **mitä** soitetaan. Ne eivät yksinään tuota ääntä, vaan ne "valmistelevat" nuotin tai soinnun, joka aktivoituu plektraa (Strum) lyötäessä.
+
+* **Toimintalogiikka:** Kun painike painetaan pohjaan, ohjelmisto lukee sen indeksin (Vihreä = 0, Punainen = 1, Keltainen = 2, jne.).
+* **Sointutilassa (Chord Mode):** Painike valitsee aktiivisesta sointusetistä tietyn soinnun (esim. Pop-setissä Vihreä = G-duuri, Punainen = C-duuri). Koodi varaa tällöin 3 oskillaattoria tuottamaan soinnun 3 eri taajuutta.
+* **Nuottitilassa (Note Mode):** Painike valitsee yksittäisen nuotin aktiivisesta oktaavista.
+* **Vapautus (Sustain):** Ääni soi niin kauan kuin pidät nauhapainiketta pohjassa. Kun nostat sormen, `releaseChord()` tai `releaseNote()` aktivoi ADSR-verhokäyrän *Release*-vaiheen, ja ääni hiipuu tyylikkäästi pois.
+
+### 2. Plektra (Strum Bar: Ylös / Alas)
+Plektra toimii instrumentin **liipaisimena (Trigger)**. 
+
+* **Toimintalogiikka:** Plektra reagoi tilanmuutokseen (reunatunnistus). Kun painat sen ylös tai alas, se etsii, onko jokin nauhapainike (Fret) painettuna.
+* **Äänen sytytys:** Jos nauha on pohjassa, Strum käskee ADSR-verhokäyrää siirtymään *Attack*-vaiheeseen (`noteOn()`), jolloin ääni syttyy soimaan. Voit lyödä plektraa toistuvasti saman nauhan ollessa pohjassa, jolloin ääni syttyy aina uudelleen (tremolo-soittotyyli).
+* **"Avoin kieli" -ominaisuus:** Jos lyöt plektraa **ilman** että yksikään nauhapainike on pohjassa, koodi soittaa automaattisesti indeksin 0 (Vihreä painike). Tämä jäljittelee oikean kitaran vapaana soivaa kieltä.
+
+### 3. Tilanvaihto (Select-painike)
+Select-painike on **pääkytkin sointujen ja nuottien välillä**.
+
+* **Toimintalogiikka:** Jokainen painallus kääntää `chordMode`-muuttujan tilan vastakkaiseksi (True ↔ False).
+* **True (Sointutila):** Ohjain soittaa kolmisointuja.
+* **False (Nuottitila):** Ohjain soittaa yksittäisiä melodialinjoja.
+* *Huomio:* Laitteen käynnistyessä sointutila on oletuksena päällä.
+
+### 4. Monitoimipainike (Start-painike)
+Start-painikkeen toiminta on **kontekstisidonnainen**. Sen tehtävä riippuu siitä, kumpi tila (Select-painikkeella valittu) on parhaillaan aktiivisena.
+
+* **Jos Sointutila on aktiivinen (`chordMode == true`):**
+    * Start-painike vaihtaa **Sointusettiä** (muuttuja `currentSet`).
+    * Se kiertää kolmen vaihtoehdon kehää: `0: Pop` → `1: Rock` → `2: Balladi` → `0: Pop`...
+    * Tämä muuttaa lennosta sitä, mitä sointuja nauhapainikkeiden takaa löytyy.
+* **Jos Nuottitila on aktiivinen (`chordMode == false`):**
+    * Start-painike vaihtaa **Oktaavia** (muuttuja `currentOct`).
+    * Se kiertää kolmen vaihtoehdon kehää: `0: Basso` → `1: Normaali` → `2: Melodia` → `0: Basso`...
+    * Tämä mahdollistaa todella matalien bassolinjojen tai korkeiden soolojen soittamisen samalla otelaudalla.
+
+### 5. Efektikytkin (D-Pad / Ristiohjain)
+Koodissasi D-Pad-nappi toimii **Vibrato-efektin on/off -polkimena**.
+
+* **Toimintalogiikka:** Painallus kääntää `vibratoOn`-muuttujan (True ↔ False).
+* **Efekti:** Kun vibrato on päällä, koodi laskee jatkuvaa hidasta siniaaltoa (LFO, Low Frequency Oscillator). Tämä aalto lisätään suoraan oskillaattorien perustaajuuteen, jolloin äänenkorkeus alkaa huojua kevyesti ylös ja alas säännöllisellä nopeudella. 
+
+### 6. Kampi (Whammy Bar)
+Whammy bar on ohjaimen ainoa **analoginen säätö** (potentiometri). Se ohjaa äänen venytystä (Pitch Bend).
+
+* **Toimintalogiikka:** Koodi lukee kammen asennon ADC-arvona (Analog to Digital Converter, arvot 0–4095). 
+* **Lepoasento:** Kun kampeen ei kosketa, arvo on 0, jolloin taajuuteen ei tehdä muutoksia.
+* **Venytys (Bend):** Mitä syvemmälle kampea painetaan, sitä suuremmaksi `bend`-kerroin kasvaa. Maksimissaan se korottaa soivan nuotin tai soinnun taajuutta 5 prosenttia (`0.05f`). Tämä antaa sooloihin sähkökitaralle tyypillistä venytystä ja ilmeikkyyttä lennosta.
