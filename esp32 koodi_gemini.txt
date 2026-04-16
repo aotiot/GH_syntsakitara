@@ -1,0 +1,78 @@
+================================================================================
+GUITAR HERO CONTROLLER SYNTHESIZER - KÄYTTÖOHJE JA DOKUMENTAATIO
+================================================================================
+
+Tämä ohjelmisto muuttaa tavallisen Guitar Hero -ohjaimen itsenäiseksi 
+digitaaliseksi syntetisaattoriksi. Järjestelmä toimii ESP32-mikrokontrollerilla 
+ja hyödyntää Mozzi-audiokirjastoa. Ääni viedään ulos erillisen I2S DAC 
+-moduulin (esim. PCM5102A) kautta parhaan mahdollisen äänenlaadun takaamiseksi.
+
+Ohjelmisto hyödyntää ESP32:n moniytimisyyttä: painikkeiden lukeminen tapahtuu 
+ytimellä 0 (Core 0), jotta ydin 1 (Core 1) voi keskittyä täysin häiriöttömään 
+audion tuottamiseen.
+
+--------------------------------------------------------------------------------
+PAINIKKEIDEN TOIMINNAT JA OHJAUS
+--------------------------------------------------------------------------------
+
+1. NAUHAPAINIKKEET (Fretit)
+Määrittävät soitettavan äänen tai soinnun. Jos painat useita nauhoja yhtä aikaa, 
+korkein painettu nauha on voimassa (Oranssi > Sininen > Keltainen > jne.).
+
+  * Vihreä:   C-nuotti (C4) tai C-duurisointu
+  * Punainen: D-nuotti (D4) tai D-duurisointu
+  * Keltainen:E-nuotti (E4) tai E-mollisointu
+  * Sininen:  A-nuotti (A3) tai A-mollisointu
+  * Oranssi:  G-nuotti (G4) tai G-duurisointu
+
+2. PLEKTRA (Strum Bar: Ylös / Alas)
+Toimii äänen liipaisimena. Ääni syttyy soimaan vain silloin, kun lyöt plektraa 
+ylös tai alas. Jotta ääni syntyy, sinun on pidettävä vähintään yhtä 
+nauhapainiketta (Fret) pohjassa plektran iskun hetkellä. Ääni jatkuu niin kauan 
+kuin pidät nauhapainiketta painettuna, ja hiipuu kun päästät irti.
+
+3. SELECT-PAINIKE (Tilanvaihto)
+Vaihtaa ohjaimen tilaa yksittäisten nuottien ja sointujen välillä.
+  * Oletustila: Nuottitila (yksi ääni kerrallaan).
+  * Painallus: Vaihtaa Sointutilaan (soittaa kolmisointuja). 
+  * Seuraava painallus: Palauttaa Nuottitilaan.
+
+4. START-PAINIKE (Reset / Panic Button)
+Toimii hätäkatkaisimena ja laitteen nollaajana.
+  * Hiljentää kaiken äänen välittömästi.
+  * Kytkee kaikki efektit (Särö, Vibrato, Tremolo, LPF) pois päältä.
+  * Palauttaa laitteen Nuottitilaan.
+  * Palauttaa oktaavin oletustasolle (1.0x).
+
+5. JOYSTICK (Efektit ja Oktaavi)
+Joystickin suunnat toimivat päälle/pois (on/off) -kytkiminä erilaisille 
+ääniefekteille. Painamalla samaa suuntaa uudelleen efekti kytkeytyy pois.
+
+  * YLÖS:  Distortion (Särö) - Vahvistaa ja säröttää äänen raskaaksi.
+  * ALAS:  Vibrato - Huojuttaa äänenkorkeutta nopeasti ylös ja alas (LFO).
+  * VASEN: Tremolo - Syövyttää äänenvoimakkuutta edestakaisin (pulputtava ääni).
+  * OIKEA: LPF (Alipäästösuodin) - Leikkaa kirkkaat taajuudet pois tehden 
+           äänestä pehmeän ja tunkkaisen.
+  * NAPPI (Joystickin painallus alas): Oktaavivaihto. Kiertää neljän oktaavin 
+           läpi kehää: Matalin (0.5x) -> Normaali (1.0x) -> Korkea (2.0x) -> 
+           Erittäin korkea (4.0x) -> Matalin (0.5x)...
+
+--------------------------------------------------------------------------------
+PINNIKYTKENTÄ (ESP32)
+--------------------------------------------------------------------------------
+Kaikki painikkeet ja joystickin suunnat kytketään ESP32-pinnin ja 
+maadoituksen (GND) väliin. Koodi käyttää ESP32:n sisäisiä ylösvetovastuksia 
+(INPUT_PULLUP), joten ulkoisia vastuksia ei tarvita.
+
+* FRETIT: Vihreä(32), Punainen(33), Keltainen(25), Sininen(26), Oranssi(27)
+* STRUM: Ylös(14), Alas(23)
+* VALINNAT: Select(15), Start(13)
+* JOYSTICK: Ylös(4), Alas(5), Vasen(16), Oikea(17), Nappi(18)
+
+* I2S DAC-MODUULI:
+  - BCLK / BCK -> GPIO 22
+  - LRC / WS   -> GPIO 21
+  - DIN / DATA -> GPIO 19
+  - VIN -> 3.3V tai 5V (moduulista riippuen)
+  - GND -> GND
+================================================================================
